@@ -568,9 +568,15 @@ fn apply_mutations(
         .entity_markers
         .read(params.command_markers, &*client_entity);
 
-    let mut history = client_entity
-        .get_mut::<ConfirmHistory>()
-        .expect("all entities from mutate message should have confirmed ticks");
+    let Some(mut history) = client_entity.get_mut::<ConfirmHistory>() else {
+        error!(
+            "ignoring mutations that arrived earlier that insertion for {:?}",
+            client_entity.id()
+        );
+        commands.entity(client_entity.id()).log_components();
+        cursor.set_position(cursor.position() + data_size as u64);
+        return Ok(());
+    };
     let new_tick = message_tick > history.last_tick();
     if new_tick {
         history.set_last_tick(message_tick);
