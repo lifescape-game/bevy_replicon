@@ -16,7 +16,8 @@ fn empty() {
                 tick_policy: TickPolicy::EveryFrame,
                 ..Default::default()
             }),
-        ));
+        ))
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -57,7 +58,8 @@ fn with_component() {
                 ..Default::default()
             }),
         ))
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -86,7 +88,8 @@ fn with_old_component() {
                 ..Default::default()
             }),
         ))
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -130,7 +133,8 @@ fn before_connection() {
                 ..Default::default()
             }),
         ))
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
     }
 
     // Spawn an entity before client connected.
@@ -159,7 +163,8 @@ fn pre_spawn() {
                 ..Default::default()
             }),
         ))
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -235,7 +240,8 @@ fn after_despawn() {
                 ..Default::default()
             }),
         ))
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);

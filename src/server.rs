@@ -6,14 +6,14 @@ pub(super) mod replicated_archetypes;
 pub(super) mod replication_messages;
 pub mod server_tick;
 
-use std::{mem, ops::Range, time::Duration};
+use std::{ops::Range, time::Duration};
 
 use bevy::{
     ecs::{
-        archetype::ArchetypeEntity,
-        component::{ComponentId, ComponentTicks, StorageType},
-        storage::{SparseSets, Table},
-        system::SystemChangeTick,
+        archetype::Archetypes,
+        component::Components,
+        system::{ParamBuilder, QueryParamBuilder, SystemChangeTick},
+        world::FilteredEntityRef,
     },
     prelude::*,
     ptr::Ptr,
@@ -37,6 +37,7 @@ use crate::core::{
         },
         replication_rules::ReplicationRules,
         track_mutate_messages::TrackMutateMessages,
+        Replicated,
     },
     replicon_server::RepliconServer,
     replicon_tick::RepliconTick,
@@ -130,17 +131,7 @@ impl Plugin for ServerPlugin {
                     .in_set(ServerSet::Receive)
                     .run_if(server_running),
             )
-            .add_systems(
-                PostUpdate,
-                (
-                    send_replication
-                        .map(Result::unwrap)
-                        .in_set(ServerSet::Send)
-                        .run_if(server_running)
-                        .run_if(resource_changed::<ServerTick>),
-                    reset.run_if(server_just_stopped),
-                ),
-            );
+            .add_systems(PostUpdate, reset.run_if(server_just_stopped));
 
         match self.tick_policy {
             TickPolicy::MaxTickRate(max_tick_rate) => {
@@ -163,6 +154,53 @@ impl Plugin for ServerPlugin {
             }
             TickPolicy::Manual => (),
         }
+    }
+
+    fn finish(&self, app: &mut App) {
+        // Construct the sending system dynamically after all rules initialization
+        // to configure access for `EntityRefMut` by IDs.
+        let rules = app
+            .world_mut()
+            .remove_resource::<ReplicationRules>()
+            .expect("replication rules should be initialized on app build");
+
+        let send_replication = (
+            ParamBuilder,
+            ParamBuilder,
+            ParamBuilder,
+            ParamBuilder,
+            QueryParamBuilder::new(|builder| {
+                builder.data::<&Replicated>().optional(|builder| {
+                    for rule in rules.iter() {
+                        for &(component_id, _) in &rule.components {
+                            builder.ref_id(component_id);
+                        }
+                    }
+                });
+            }),
+            ParamBuilder,
+            ParamBuilder,
+            ParamBuilder,
+            ParamBuilder,
+            ParamBuilder,
+            ParamBuilder,
+            ParamBuilder,
+            ParamBuilder,
+            ParamBuilder,
+            ParamBuilder,
+            ParamBuilder,
+        )
+            .build_state(app.world_mut())
+            .build_system(send_replication);
+
+        app.insert_resource(rules).add_systems(
+            PostUpdate,
+            send_replication
+                .map(Result::unwrap)
+                .in_set(ServerSet::Send)
+                .run_if(server_running)
+                .run_if(resource_changed::<ServerTick>),
+        );
     }
 }
 
@@ -251,32 +289,27 @@ fn receive_acks(
 }
 
 /// Collects [`ReplicationMessages`] and sends them.
-pub(super) fn send_replication(
-    mut serialized: Local<SerializedData>,
-    mut messages: Local<ReplicationMessages>,
-    mut replicated_archetypes: Local<ReplicatedArchetypes>,
+///
+/// Some system params are grouped into tuples to fit within Bevy's limit of 16 params.
+fn send_replication(
     change_tick: SystemChangeTick,
-    mut set: ParamSet<(
-        &World,
-        ResMut<ReplicatedClients>,
-        ResMut<RemovalBuffer>,
-        ResMut<ClientBuffers>,
-        ResMut<ClientEntityMap>,
-        ResMut<DespawnBuffer>,
-        ResMut<RepliconServer>,
-    )>,
+    (archetypes, components): (&Archetypes, &Components),
+    (mut serialized, mut messages): (Local<SerializedData>, Local<ReplicationMessages>),
+    mut replicated_archetypes: Local<ReplicatedArchetypes>,
+    entities: Query<FilteredEntityRef>,
+    mut replicated_clients: ResMut<ReplicatedClients>,
+    mut removal_buffer: ResMut<RemovalBuffer>,
+    mut client_buffers: ResMut<ClientBuffers>,
+    mut entity_map: ResMut<ClientEntityMap>,
+    mut despawn_buffer: ResMut<DespawnBuffer>,
+    mut server: ResMut<RepliconServer>,
     track_mutate_messages: Res<TrackMutateMessages>,
     registry: Res<ReplicationRegistry>,
     rules: Res<ReplicationRules>,
     server_tick: Res<ServerTick>,
     time: Res<Time>,
 ) -> postcard::Result<()> {
-    replicated_archetypes.update(set.p0(), &rules);
-
-    // Take ownership to avoid borrowing issues.
-    let mut replicated_clients = mem::take(&mut *set.p1());
-    let mut removal_buffer = mem::take(&mut *set.p2());
-    let mut client_buffers = mem::take(&mut *set.p3());
+    replicated_archetypes.update(archetypes, components, &rules);
 
     messages.reset(replicated_clients.len());
 
@@ -284,13 +317,13 @@ pub(super) fn send_replication(
         &mut messages,
         &mut serialized,
         &replicated_clients,
-        &mut set.p4(),
+        &mut entity_map,
     )?;
     collect_despawns(
         &mut messages,
         &mut serialized,
         &mut replicated_clients,
-        &mut set.p5(),
+        &mut despawn_buffer,
     )?;
     collect_removals(
         &mut messages,
@@ -305,7 +338,8 @@ pub(super) fn send_replication(
         &replicated_archetypes,
         &registry,
         &removal_buffer,
-        set.p0(),
+        archetypes,
+        &entities,
         &change_tick,
         **server_tick,
     )?;
@@ -314,7 +348,7 @@ pub(super) fn send_replication(
     send_messages(
         &mut messages,
         &mut replicated_clients,
-        &mut set.p6(),
+        &mut server,
         **server_tick,
         **track_mutate_messages,
         &mut serialized,
@@ -323,11 +357,6 @@ pub(super) fn send_replication(
         &time,
     )?;
     serialized.clear();
-
-    // Return borrowed data back.
-    *set.p1() = replicated_clients;
-    *set.p2() = removal_buffer;
-    *set.p3() = client_buffers;
 
     Ok(())
 }
@@ -471,28 +500,18 @@ fn collect_changes(
     replicated_archetypes: &ReplicatedArchetypes,
     registry: &ReplicationRegistry,
     removal_buffer: &RemovalBuffer,
-    world: &World,
+    archetypes: &Archetypes,
+    entities: &Query<FilteredEntityRef>,
     change_tick: &SystemChangeTick,
     server_tick: RepliconTick,
 ) -> postcard::Result<()> {
     for replicated_archetype in replicated_archetypes.iter() {
         // SAFETY: all IDs from replicated archetypes obtained from real archetypes.
-        let archetype = unsafe {
-            world
-                .archetypes()
-                .get(replicated_archetype.id)
-                .unwrap_unchecked()
-        };
-        // SAFETY: table obtained from this archetype.
-        let table = unsafe {
-            world
-                .storages()
-                .tables
-                .get(archetype.table_id())
-                .unwrap_unchecked()
-        };
+        let archetype = unsafe { archetypes.get(replicated_archetype.id).unwrap_unchecked() };
 
         for entity in archetype.entities() {
+            // SAFETY: entity comes from an archetype and query matches it.
+            let entity = unsafe { entities.get(entity.id()).unwrap_unchecked() };
             let mut entity_range = None;
             for ((update_message, mutate_message), client) in
                 messages.iter_mut().zip(replicated_clients.iter())
@@ -502,16 +521,13 @@ fn collect_changes(
                 mutate_message.start_entity_mutations();
             }
 
-            // SAFETY: all replicated archetypes have marker component with table storage.
-            let (_, marker_ticks) = unsafe {
-                get_component_unchecked(
-                    table,
-                    &world.storages().sparse_sets,
-                    entity,
-                    StorageType::Table,
-                    replicated_archetypes.marker_id(),
-                )
+            // SAFETY: all replicated archetypes have marker and `FilteredEntityRef` has access to it.
+            let marker_ticks = unsafe {
+                entity
+                    .get_change_ticks_by_id(replicated_archetypes.marker_id())
+                    .unwrap_unchecked()
             };
+
             // If the marker was added in this tick, the entity just started replicating.
             // It could be a newly spawned entity or an old entity with just-enabled replication,
             // so we need to include even old components that were registered for replication.
@@ -522,14 +538,13 @@ fn collect_changes(
                 let (component_id, component_fns, rule_fns) =
                     registry.get(replicated_component.fns_id);
 
-                // SAFETY: component and storage were obtained from this archetype.
+                // SAFETY: entity has its archetype's component and `FilteredEntityRef` has access to it.
                 let (component, ticks) = unsafe {
-                    get_component_unchecked(
-                        table,
-                        &world.storages().sparse_sets,
-                        entity,
-                        replicated_component.storage_type,
-                        component_id,
+                    (
+                        entity.get_by_id(component_id).unwrap_unchecked(),
+                        entity
+                            .get_change_ticks_by_id(component_id)
+                            .unwrap_unchecked(),
                     )
                 };
 
@@ -621,40 +636,6 @@ fn collect_changes(
     }
 
     Ok(())
-}
-
-/// Extracts component in form of [`Ptr`] and its ticks from table or sparse set based on its storage type.
-///
-/// # Safety
-///
-/// Component should be present in this archetype and have this storage type.
-unsafe fn get_component_unchecked<'w>(
-    table: &'w Table,
-    sparse_sets: &'w SparseSets,
-    entity: &ArchetypeEntity,
-    storage_type: StorageType,
-    component_id: ComponentId,
-) -> (Ptr<'w>, ComponentTicks) {
-    match storage_type {
-        StorageType::Table => {
-            // TODO: re-use column lookup, asked in https://github.com/bevyengine/bevy/issues/16593.
-            let component: Ptr<'w> = table
-                .get_component(component_id, entity.table_row())
-                .unwrap_unchecked();
-            let ticks = table
-                .get_ticks_unchecked(component_id, entity.table_row())
-                .unwrap_unchecked();
-
-            (component, ticks)
-        }
-        StorageType::SparseSet => {
-            let sparse_set = sparse_sets.get(component_id).unwrap_unchecked();
-            let component = sparse_set.get(entity.id()).unwrap_unchecked();
-            let ticks = sparse_set.get_ticks(entity.id()).unwrap_unchecked();
-
-            (component, ticks)
-        }
-    }
 }
 
 /// Writes an entity or re-uses previously written range if exists.

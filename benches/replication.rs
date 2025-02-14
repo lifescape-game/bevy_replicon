@@ -215,7 +215,8 @@ fn create_app<C: Component + Serialize + DeserializeOwned>() -> App {
             ..Default::default()
         }),
     ))
-    .replicate::<C>();
+    .replicate::<C>()
+    .finish();
 
     app
 }

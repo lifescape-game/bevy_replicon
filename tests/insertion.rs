@@ -27,7 +27,8 @@ fn table_storage() {
                 ..Default::default()
             }),
         ))
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -66,7 +67,8 @@ fn sparse_set_storage() {
                 ..Default::default()
             }),
         ))
-        .replicate::<SparseSetComponent>();
+        .replicate::<SparseSetComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -105,7 +107,8 @@ fn mapped_existing_entity() {
                 ..Default::default()
             }),
         ))
-        .replicate_mapped::<MappedComponent>();
+        .replicate_mapped::<MappedComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -155,7 +158,8 @@ fn mapped_new_entity() {
                 ..Default::default()
             }),
         ))
-        .replicate_mapped::<MappedComponent>();
+        .replicate_mapped::<MappedComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -203,7 +207,8 @@ fn command_fns() {
             }),
         ))
         .replicate::<OriginalComponent>()
-        .set_command_fns(replace, command_fns::default_remove::<ReplacedComponent>);
+        .set_command_fns(replace, command_fns::default_remove::<ReplacedComponent>)
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -247,7 +252,8 @@ fn marker() {
         .set_marker_fns::<ReplaceMarker, _>(
             replace,
             command_fns::default_remove::<ReplacedComponent>,
-        );
+        )
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -298,7 +304,8 @@ fn group() {
                 ..Default::default()
             }),
         ))
-        .replicate_group::<(GroupComponentA, GroupComponentB)>();
+        .replicate_group::<(GroupComponentA, GroupComponentB)>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -336,7 +343,8 @@ fn not_replicated() {
                 tick_policy: TickPolicy::EveryFrame,
                 ..Default::default()
             }),
-        ));
+        ))
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -377,7 +385,8 @@ fn after_removal() {
                 ..Default::default()
             }),
         ))
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -422,7 +431,8 @@ fn before_started_replication() {
                 ..Default::default()
             }),
         ))
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -473,7 +483,8 @@ fn after_started_replication() {
                 ..Default::default()
             }),
         ))
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -512,7 +523,8 @@ fn confirm_history() {
                 ..Default::default()
             }),
         ))
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);

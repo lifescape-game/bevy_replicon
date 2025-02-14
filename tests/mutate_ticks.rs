@@ -21,9 +21,9 @@ fn without_changes() {
             }),
         ))
         .track_mutate_messages()
-        .replicate::<BoolComponent>();
+        .replicate::<BoolComponent>()
+        .finish();
     }
-    client_app.finish();
 
     server_app.connect_client(&mut client_app);
 
@@ -56,9 +56,9 @@ fn one_message() {
             }),
         ))
         .track_mutate_messages()
-        .replicate::<BoolComponent>();
+        .replicate::<BoolComponent>()
+        .finish();
     }
-    client_app.finish();
 
     server_app.connect_client(&mut client_app);
 
@@ -123,9 +123,9 @@ fn multiple_messages() {
             }),
         ))
         .track_mutate_messages()
-        .replicate::<BoolComponent>();
+        .replicate::<BoolComponent>()
+        .finish();
     }
-    client_app.finish();
 
     server_app.connect_client(&mut client_app);
 

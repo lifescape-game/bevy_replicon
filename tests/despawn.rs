@@ -15,7 +15,8 @@ fn single() {
                 tick_policy: TickPolicy::EveryFrame,
                 ..Default::default()
             }),
-        ));
+        ))
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -52,7 +53,8 @@ fn with_hierarchy() {
                 tick_policy: TickPolicy::EveryFrame,
                 ..Default::default()
             }),
-        ));
+        ))
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -98,7 +100,8 @@ fn after_spawn() {
                 ..Default::default()
             }),
         ))
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);
@@ -129,7 +132,8 @@ fn hidden() {
                 visibility_policy: VisibilityPolicy::Whitelist, // Hide all spawned entities by default.
                 ..Default::default()
             }),
-        ));
+        ))
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);

@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 #[should_panic]
 fn serialize_missing_component() {
     let mut app = App::new();
-    app.add_plugins((MinimalPlugins, RepliconPlugins));
+    app.add_plugins((MinimalPlugins, RepliconPlugins)).finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -39,7 +39,7 @@ fn serialize_missing_component() {
 #[test]
 fn write() {
     let mut app = App::new();
-    app.add_plugins((MinimalPlugins, RepliconPlugins));
+    app.add_plugins((MinimalPlugins, RepliconPlugins)).finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -58,7 +58,7 @@ fn write() {
 #[test]
 fn remove() {
     let mut app = App::new();
-    app.add_plugins((MinimalPlugins, RepliconPlugins));
+    app.add_plugins((MinimalPlugins, RepliconPlugins)).finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -76,7 +76,8 @@ fn remove() {
 fn write_with_command() {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, RepliconPlugins))
-        .set_command_fns(replace, command_fns::default_remove::<ReplacedComponent>);
+        .set_command_fns(replace, command_fns::default_remove::<ReplacedComponent>)
+        .finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -95,7 +96,8 @@ fn write_with_command() {
 fn remove_with_command() {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, RepliconPlugins))
-        .set_command_fns(replace, command_fns::default_remove::<ReplacedComponent>);
+        .set_command_fns(replace, command_fns::default_remove::<ReplacedComponent>)
+        .finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -117,7 +119,8 @@ fn write_without_marker() {
         .set_marker_fns::<ReplaceMarker, _>(
             replace,
             command_fns::default_remove::<ReplacedComponent>,
-        );
+        )
+        .finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -141,7 +144,8 @@ fn remove_without_marker() {
         .set_marker_fns::<ReplaceMarker, _>(
             replace,
             command_fns::default_remove::<ReplacedComponent>,
-        );
+        )
+        .finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -163,7 +167,8 @@ fn write_with_marker() {
         .set_marker_fns::<ReplaceMarker, _>(
             replace,
             command_fns::default_remove::<ReplacedComponent>,
-        );
+        )
+        .finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -186,7 +191,8 @@ fn remove_with_marker() {
         .set_marker_fns::<ReplaceMarker, _>(
             replace,
             command_fns::default_remove::<ReplacedComponent>,
-        );
+        )
+        .finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -213,7 +219,8 @@ fn write_with_multiple_markers() {
         .set_marker_fns::<DummyMarker, _>(
             command_fns::default_write::<OriginalComponent>,
             command_fns::default_remove::<OriginalComponent>,
-        );
+        )
+        .finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -246,7 +253,8 @@ fn remove_with_mutltiple_markers() {
         .set_marker_fns::<DummyMarker, _>(
             command_fns::default_write::<OriginalComponent>,
             command_fns::default_remove::<OriginalComponent>,
-        );
+        )
+        .finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -281,7 +289,8 @@ fn write_with_priority_marker() {
         .set_marker_fns::<DummyMarker, _>(
             command_fns::default_write::<OriginalComponent>,
             command_fns::default_remove::<OriginalComponent>,
-        );
+        )
+        .finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -314,7 +323,8 @@ fn remove_with_priority_marker() {
         .set_marker_fns::<DummyMarker, _>(
             command_fns::default_write::<OriginalComponent>,
             command_fns::default_remove::<OriginalComponent>,
-        );
+        )
+        .finish();
 
     let tick = RepliconTick::default();
     let (_, fns_id) =
@@ -333,7 +343,7 @@ fn remove_with_priority_marker() {
 #[test]
 fn despawn() {
     let mut app = App::new();
-    app.add_plugins((MinimalPlugins, RepliconPlugins));
+    app.add_plugins((MinimalPlugins, RepliconPlugins)).finish();
 
     let mut registry = app.world_mut().resource_mut::<ReplicationRegistry>();
     registry.despawn = mark_despawned;

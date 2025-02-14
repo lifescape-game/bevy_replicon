@@ -14,7 +14,8 @@ fn client_stats() {
                 ..Default::default()
             }),
         ))
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
     }
 
     server_app.connect_client(&mut client_app);

@@ -10,7 +10,8 @@ fn replicated_entity() {
         .register_type::<NonReflectedComponent>()
         .replicate::<DummyComponent>()
         .replicate::<OtherReflectedComponent>() // Reflected, but the type is not registered.
-        .replicate::<NonReflectedComponent>();
+        .replicate::<NonReflectedComponent>()
+        .finish();
 
     let entity = app
         .world_mut()
@@ -40,7 +41,7 @@ fn replicated_entity() {
 #[test]
 fn empty_entity() {
     let mut app = App::new();
-    app.add_plugins(RepliconPlugins);
+    app.add_plugins(RepliconPlugins).finish();
 
     let entity = app.world_mut().spawn(Replicated).id();
 
@@ -61,7 +62,8 @@ fn not_replicated_entity() {
     let mut app = App::new();
     app.add_plugins(RepliconPlugins)
         .register_type::<DummyComponent>()
-        .replicate::<DummyComponent>();
+        .replicate::<DummyComponent>()
+        .finish();
 
     app.world_mut().spawn(DummyComponent);
 
@@ -78,7 +80,8 @@ fn entity_update() {
     app.add_plugins(RepliconPlugins)
         .register_type::<DummyComponent>()
         .replicate::<DummyComponent>()
-        .register_type::<OtherReflectedComponent>();
+        .register_type::<OtherReflectedComponent>()
+        .finish();
 
     let entity = app
         .world_mut()

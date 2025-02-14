@@ -29,7 +29,8 @@ for app in [&mut server_app, &mut client_app] {
             tick_policy: TickPolicy::EveryFrame, // To tick each app update.
             ..Default::default()
         }),
-    ));
+    ))
+    .finish();
 }
 
 // Simulate connection between two apps:
