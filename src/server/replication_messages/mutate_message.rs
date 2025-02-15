@@ -226,7 +226,9 @@ impl MutateMessage {
 }
 
 fn can_pack(message_size: usize, add: usize) -> bool {
-    const MAX_PACKET_SIZE: usize = 1200; // TODO: make it configurable by the messaging backend.
+    // Max size allowed by quinn datagrams.
+    // TODO: make it configurable by the messaging backend.
+    const MAX_PACKET_SIZE: usize = 1162;
 
     let dangling = message_size % MAX_PACKET_SIZE;
     (dangling > 0) && ((dangling + add) <= MAX_PACKET_SIZE)
@@ -239,13 +241,13 @@ mod tests {
     #[test]
     fn packing() {
         assert!(can_pack(10, 5));
-        assert!(can_pack(10, 1190));
-        assert!(!can_pack(10, 1191));
+        assert!(can_pack(10, 1152));
+        assert!(!can_pack(10, 1153));
         assert!(!can_pack(10, 3000));
 
-        assert!(can_pack(1199, 1));
-        assert!(!can_pack(1200, 0));
-        assert!(!can_pack(1200, 1));
-        assert!(!can_pack(1200, 3000));
+        assert!(can_pack(1161, 1));
+        assert!(!can_pack(1162, 0));
+        assert!(!can_pack(1162, 1));
+        assert!(!can_pack(1162, 3000));
     }
 }
