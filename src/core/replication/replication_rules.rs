@@ -349,7 +349,7 @@ impl AppRuleExt for App {
 }
 
 /// All registered rules for components replication.
-#[derive(Default, Deref, Resource)]
+#[derive(Default, Deref, Resource, Clone)]
 pub struct ReplicationRules(Vec<ReplicationRule>);
 
 impl ReplicationRules {
@@ -364,6 +364,7 @@ impl ReplicationRules {
 }
 
 /// Describes a replicated component or a group of components.
+#[derive(Clone)]
 pub struct ReplicationRule {
     /// Priority for this rule.
     ///
